@@ -17,3 +17,15 @@ flowchart TB
 	Starting("Starting query performance tuning analysis") --> IsolateTsqlQuery{"Have you identified and isolated <br> the query that is slow?"}
 	IsolateTsqlQuery -->|"No"| IsolateTsqlQuery_No["First find and isolate the query that is slow!"]
 	IsolateTsqlQuery_No --> Starting
+	Focus_CTE{"Does it use CTEs?"} -->|"Yes"| Focus_CTE_Structure{"Is it a recursive CTE?"}
+	IsolateTsqlQuery --->|"Yes <br> "| Focus_CTE
+	Focus_CTE_Structure -->|"Yes"| RecursiveCTERelation{"What is the relation? <br> 1-n or n-n?"}
+	RecursiveCTERelation -->|"n-n"| RecursiveCTERelation_nTOn["Performance of n-n relations may not be great. <br> Check if you have good indexing in place. <br><br> Test doing the same with a <br> hand-made cycle (#tmp tables + cycle)"]
+    Result_ImprovementYes["Do you see improvements? #128588;"]
+	RecursiveCTERelation_nTOn --> Result_ImprovementYes
+	RecursiveCTERelation -->|"1-n"| RecursiveCTERelation_1TOn["Nice! Recursive CTEs <br> are better on 1-n relations."]
+	RecursiveCTERelation_1TOn --> RecursiveCTERelation_1TOn_MultipleCalls{"Do you see the CTE being <br> called more than once?"}
+	Focus_CTE_Structure -->|"No"| RecursiveCTERelation_1TOn_MultipleCalls
+	RecursiveCTERelation_1TOn_MultipleCalls -->|"Yes"| CTEsNotTempTables["CTEs aren't temp tables. <br> The result won't be cached anyway. <br> This means the content of the CTE will  <br> need to run as many times as it's mentioned <br>  Check <ins>Using Common Table Expression (CTE) - Did you know...</ins>  <br>  <br>  <br> Try to get the data you need into a #temp  <br> table so you just hit that table(s) once <br> Then use the #temp table instead of/with  <br> the CTE"]
+	CTEsNotTempTables --> Result_ImprovementYes
+	click CTEsNotTempTables "https://claudioessilva.eu/2017/11/30/Using-Common-Table-Expression-CTE-Did-you-know.../" "Using Common Table Expression (CTE) - Did you know..."
