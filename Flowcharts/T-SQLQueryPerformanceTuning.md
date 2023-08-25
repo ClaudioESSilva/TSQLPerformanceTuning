@@ -12,3 +12,8 @@ That said, this is a high level flowchart that will try to guide you and may or 
 
 Hopefully, it will give you more ideas where to look at.
 
+```mermaid
+flowchart TB
+	Starting("Starting query performance tuning analysis") --> IsolateTsqlQuery{"Have you identified and isolated <br> the query that is slow?"}
+	IsolateTsqlQuery -->|"No"| IsolateTsqlQuery_No["First find and isolate the query that is slow!"]
+	IsolateTsqlQuery_No --> Starting
