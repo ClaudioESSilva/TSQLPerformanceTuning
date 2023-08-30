@@ -46,6 +46,9 @@ flowchart TB
     Focus_WhereClause --> Pattern_LongInClause{"Does the query have a <br> long IN clause? <br> Ex: 'ID IN (1,2,3...,19,21)'"}
 	Pattern_LongInClause -->|"Yes"| Fix_LongInClause["If you see a CONSTANT SCAN or FILTER <br>operator on the  plan with big cost this <br> will most probably be the problem. <br><br> Replace the long in clause by either: <br> (1) using the BETWEEN clause or <br> (2) a temp table <br> (3) Table variable can also work but <br> be aware that can make query run <br> in serial if pre 2019 or if <br> DEFERED_COMPILATION_TV is OFF"]
 	Fix_LongInClause --> Result_ImprovementYes
+    Pattern_LongInClause -->|"No"| Pattern_LongListOfAndOr{"What about a mix of <br> of AND/OR filters?"}
+	Pattern_LongListOfAndOr -->|"Yes"| Fix_MutilpleANDsORs["If possible combine them on a temp table. <br> Sometimes this is not possible and one other workaround <br> would be split the query into 2 or more joined by UNION (ALL). <br><br> The UNION (ALL) will act as the 'OR'. <br> Each SELECT should only have a part of the filter. <br><br> Be careful with the logic. Some times this queries <br>has so much parenthesis that makes it confuse to split."]
+	Fix_MutilpleANDsORs --> Result_ImprovementYes
 
 
 	click CTEsNotTempTables "https://claudioessilva.eu/2017/11/30/Using-Common-Table-Expression-CTE-Did-you-know.../" "Using Common Table Expression (CTE) - Did you know..."
