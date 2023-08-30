@@ -50,6 +50,9 @@ flowchart TB
 	Pattern_LongListOfAndOr -->|"Yes"| Fix_MutilpleANDsORs["If possible combine them on a temp table. <br> Sometimes this is not possible and one other workaround <br> would be split the query into 2 or more joined by UNION (ALL). <br><br> The UNION (ALL) will act as the 'OR'. <br> Each SELECT should only have a part of the filter. <br><br> Be careful with the logic. Some times this queries <br>has so much parenthesis that makes it confuse to split."]
 	Fix_MutilpleANDsORs --> Result_ImprovementYes
 
+    Pattern_LongListOfAndOr -->|"No"| Pattern_NativeFunctions{"Do you see native functions such as <br> SUBSTRING, LEN, DATEPART,<br>  CAST, CONVERT etc, being used on the table's columns? <br><br>Examples: <br>(1) 'DATEPART(YEAR, ModifiedDate) = 2023' <br> or <br>(2) 'LEN(PostalCode) = 4'<br> or <br>(3) CAST(t.Date AS DATE) = CAST(GETDATE() AS DATE)"}
+	Pattern_NativeFunctions -->|"Yes"| Fix_NativeFunctions["Most probably you are getting an 'Index Scan' operator <br> instead of a 'Index Seek' and/or a big number of records <br> being read whereas you were expecting just a few of them. <br> <br> Rewrite that clause in a way that you <br> don't touch the table column. <br> Instead apply the logic to the constant part. <br> Ex: <br> (1) ModifiedDate &gt;= '2023-01-01' AND ModifiedDate &lt; '2024-01-01' <br> (2) PostalCode &gt; 999 AND PostalCode &lt; 10000 <br> (3) t.Date &gt;= CAST(GETDATE() AS DATE) <br> AND t.Date &lt; CAST(DATEADD(dd, 1, GETDATE()) AS DATE)"]
+	Fix_NativeFunctions --> Result_ImprovementYes
 
 	click CTEsNotTempTables "https://claudioessilva.eu/2017/11/30/Using-Common-Table-Expression-CTE-Did-you-know.../" "Using Common Table Expression (CTE) - Did you know..."
     click FixDataTypePrecision_No "https://www.sql.kiwi/2012/09/why-doesn-t-partition-elimination-work.html" "Paul's White - 'Why doesn't partition elimination work?'"
