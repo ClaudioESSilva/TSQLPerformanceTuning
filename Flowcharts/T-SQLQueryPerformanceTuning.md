@@ -40,5 +40,13 @@ flowchart TB
 	PartitionEliminationParttern -->|"No"| AddPartitionColumns{"Can the query be <br> changed to use them?"}
 	AddPartitionColumns -->|"Yes"| DataTypesAndPercision
 
+    Focus_WhereClause["Lets focus on the WHERE clause"]
+    RecursiveCTERelation_1TOn_MultipleCalls -->|"No"| Focus_WhereClause
+    PartitionedTable -->|"No"| Focus_WhereClause
+    Focus_WhereClause --> Pattern_LongInClause{"Does the query have a <br> long IN clause? <br> Ex: 'ID IN (1,2,3...,19,21)'"}
+	Pattern_LongInClause -->|"Yes"| Fix_LongInClause["If you see a CONSTANT SCAN or FILTER <br>operator on the  plan with big cost this <br> will most probably be the problem. <br><br> Replace the long in clause by either: <br> (1) using the BETWEEN clause or <br> (2) a temp table <br> (3) Table variable can also work but <br> be aware that can make query run <br> in serial if pre 2019 or if <br> DEFERED_COMPILATION_TV is OFF"]
+	Fix_LongInClause --> Result_ImprovementYes
+
+
 	click CTEsNotTempTables "https://claudioessilva.eu/2017/11/30/Using-Common-Table-Expression-CTE-Did-you-know.../" "Using Common Table Expression (CTE) - Did you know..."
     click FixDataTypePrecision_No "https://www.sql.kiwi/2012/09/why-doesn-t-partition-elimination-work.html" "Paul's White - 'Why doesn't partition elimination work?'"
