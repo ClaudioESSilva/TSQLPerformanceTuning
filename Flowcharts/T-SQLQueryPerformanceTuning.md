@@ -54,5 +54,20 @@ flowchart TB
 	Pattern_NativeFunctions -->|"Yes"| Fix_NativeFunctions["Most probably you are getting an 'Index Scan' operator <br> instead of a 'Index Seek' and/or a big number of records <br> being read whereas you were expecting just a few of them. <br> <br> Rewrite that clause in a way that you <br> don't touch the table column. <br> Instead apply the logic to the constant part. <br> Ex: <br> (1) ModifiedDate &gt;= '2023-01-01' AND ModifiedDate &lt; '2024-01-01' <br> (2) PostalCode &gt; 999 AND PostalCode &lt; 10000 <br> (3) t.Date &gt;= CAST(GETDATE() AS DATE) <br> AND t.Date &lt; CAST(DATEADD(dd, 1, GETDATE()) AS DATE)"]
 	Fix_NativeFunctions --> Result_ImprovementYes
 
+    Pattern_NativeFunctions -->|"No"| Pattern_ScalarUDF{"What about Scalar User <br> Defined Functions (UDF)?"}
+	Pattern_ScalarUDF -->|"Yes"| CheckVersion_ScalarUDF{"Is database compatibility <br> level 150 (2019) or higher?"}
+	CheckVersion_ScalarUDF -->|"No"| Attention_WontParallelise["Your query won't parallelize!"]
+            %% Fix_LongInClause
+	Attention_WontParallelise --> Version_ScalarUDFNot2019["Try to pull the code from the function into <br> a CROSS/OUTER APPLY and then do the check. <br><br> Make sure you test the scenario correctly. <br> Use the OUTER if you need to still need <br> to return 'NULL' values."]
+	CheckVersion_ScalarUDF -->|"Yes"| Version_ScalarUDF2019Or+_Inlineable{"Is the scalar <br> UDF <ins>inlineable</ins>? <br> <br> Query the <br> sys.sql_modules <br> to find out"}
+	Version_ScalarUDF2019Or+_Inlineable -->|"Yes"| UDFInlineableCheckSC{"Is the <br> 'TSQL_SCALAR_UDF_INLINING' <br> database scoped <br> configuration turned ON?"}
+	UDFInlineableCheckSC -->|"No"| Attention_UDFInlineableCheckSC["This option is ON by default, be aware that if you found <br> it OFF may be theris a good reason. <br><br> You can use a query HINT to disable it but not to enable. <br> You can, out of curiosity, turn it on and check <br> if it will make a difference"]
+	Attention_UDFInlineableCheckSC -->|"Howerver..."| Version_ScalarUDFNot2019
+	UDFInlineableCheckSC -->|"Yes"| Version_ScalarUDFNot2019
+	Version_ScalarUDF2019Or+_Inlineable -->|"No"| Note_ReasonsNotInlineable["There are a lot of requirements that <br> need to be met for a scalar UDF to be inlineable. <br> Check <ins>'Inlineable scalar UDF requirements</ins>'"]
+	Note_ReasonsNotInlineable -->|"Workaround"| Version_ScalarUDFNot2019
+	Version_ScalarUDFNot2019 --> Result_ImprovementYes
+
 	click CTEsNotTempTables "https://claudioessilva.eu/2017/11/30/Using-Common-Table-Expression-CTE-Did-you-know.../" "Using Common Table Expression (CTE) - Did you know..."
     click FixDataTypePrecision_No "https://www.sql.kiwi/2012/09/why-doesn-t-partition-elimination-work.html" "Paul's White - 'Why doesn't partition elimination work?'"
+    click Note_ReasonsNotInlineable "https://learn.microsoft.com/en-us/sql/relational-databases/user-defined-functions/scalar-udf-inlining?view=sql-server-ver16#requirements" "Inlineable scalar UDF requirements"
