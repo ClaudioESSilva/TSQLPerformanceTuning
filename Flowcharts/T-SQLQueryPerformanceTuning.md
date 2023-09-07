@@ -71,6 +71,17 @@ flowchart TB
 	Note_ReasonsNotInlineable -->|"Workaround"| Version_ScalarUDFNot2019
 	Version_ScalarUDFNot2019 --> Result_ImprovementYes
 
+	Focus_OnFrom["Lets take a look on FROM"]
+	CheckVersion_ScalarUDF -->|"No"| Focus_OnFrom
+	Focus_OnFrom --> Joins{"Does the query uses JOINs?"}
+	Joins -->|"Yes"| Joins_Or{"Does the join clause have <br>any OR logical operator? <br><br> Ex: ON tbl1.Col1 = tbl2.Col1 <br> OR tbl1.Col2 = tbl2.Col2"}
+	Joins -->|"No"| ContinueOptimization
+	Joins_Or -->|"Yes"| Fix_JoinsOr["Try to split the query in <br> multiple SELECT staments. <br> Each one will do the <br>JOIN on one of the conditions. <br>Use UNION [ALL] to merge the results.<br><br> Make sure you have proper <br>indexing on those <br>columns for better results"]
+	Fix_JoinsOr --> Extra["You will get something like:<br> SELECT...<br>FROM tbl1 <br>INNER JOIN tbl2 <br>ON tbl1.col1 = tbl2.col1<br> UNION [ALL]<br> SELECT...<br>FROM tbl1 <br>INNER JOIN tbl2 <br>ON tbl1.col2 = tbl2.col2"]
+	Joins_Or -->|"No"| ContinueOptimization
+	%% Fix_JoinsOr --> Result_ImprovementYes
+	Extra --> Result_ImprovementYes
+
 	click CTEsNotTempTables "https://claudioessilva.eu/2017/11/30/Using-Common-Table-Expression-CTE-Did-you-know.../" "Using Common Table Expression (CTE) - Did you know..."
     click FixDataTypePrecision_No "https://www.sql.kiwi/2012/09/why-doesn-t-partition-elimination-work.html" "Paul's White - 'Why doesn't partition elimination work?'"
     click Note_ReasonsNotInlineable "https://learn.microsoft.com/en-us/sql/relational-databases/user-defined-functions/scalar-udf-inlining?view=sql-server-ver16#requirements" "Inlineable scalar UDF requirements"
