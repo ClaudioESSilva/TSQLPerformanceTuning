@@ -46,6 +46,7 @@ flowchart TB
     Focus_WhereClause --> Pattern_LongInClause{"Does the query have a <br> long IN clause? <br> Ex: 'ID IN (1,2,3...,19,21)'"}
 	Pattern_LongInClause -->|"Yes"| Fix_LongInClause["If you see a CONSTANT SCAN or FILTER <br>operator on the  plan with big cost this <br> will most probably be the problem. <br><br> Replace the long in clause by either: <br> (1) using the BETWEEN clause or <br> (2) a temp table <br> (3) Table variable can also work but <br> be aware that can make query run <br> in serial if pre 2019 or if <br> DEFERED_COMPILATION_TV is OFF"]
 	Fix_LongInClause --> Result_ImprovementYes
+	
     Pattern_LongInClause -->|"No"| Pattern_LongListOfAndOr{"What about a mix of <br> of AND/OR filters?"}
 	Pattern_LongListOfAndOr -->|"Yes"| Fix_MutilpleANDsORs["If possible combine them on a temp table. <br> Sometimes this is not possible and one other workaround <br> would be split the query into 2 or more joined by UNION (ALL). <br><br> The UNION (ALL) will act as the 'OR'. <br> Each SELECT should only have a part of the filter. <br><br> Be careful with the logic. Some times this queries <br>has so much parenthesis that makes it confuse to split."]
 	Fix_MutilpleANDsORs --> Result_ImprovementYes
@@ -54,7 +55,9 @@ flowchart TB
 	Pattern_NativeFunctions -->|"Yes"| Fix_NativeFunctions["Most probably you are getting an 'Index Scan' operator <br> instead of a 'Index Seek' and/or a big number of records <br> being read whereas you were expecting just a few of them. <br> <br> Rewrite that clause in a way that you <br> don't touch the table column. <br> Instead apply the logic to the constant part. <br> Ex: <br> (1) ModifiedDate &gt;= '2023-01-01' AND ModifiedDate &lt; '2024-01-01' <br> (2) PostalCode &gt; 999 AND PostalCode &lt; 10000 <br> (3) t.Date &gt;= CAST(GETDATE() AS DATE) <br> AND t.Date &lt; CAST(DATEADD(dd, 1, GETDATE()) AS DATE)"]
 	Fix_NativeFunctions --> Result_ImprovementYes
 
-    Pattern_NativeFunctions -->|"No"| Pattern_ScalarUDF{"What about Scalar User <br> Defined Functions (UDF)?"}
+	Focus_SelectWhere["Lets keep in mind the whole query again"]
+    Pattern_NativeFunctions -->|"No"| Focus_SelectWhere
+	Focus_SelectWhere --> Pattern_ScalarUDF{"What about Scalar User <br> Defined Functions (UDF)?"}
 	Pattern_ScalarUDF -->|"Yes"| CheckVersion_ScalarUDF{"Is database compatibility <br> level 150 (2019) or higher?"}
 	CheckVersion_ScalarUDF -->|"No"| Attention_WontParallelise["Your query won't parallelize!"]
             %% Fix_LongInClause
@@ -62,7 +65,7 @@ flowchart TB
 	CheckVersion_ScalarUDF -->|"Yes"| Version_ScalarUDF2019Or+_Inlineable{"Is the scalar <br> UDF <ins>inlineable</ins>? <br> <br> Query the <br> sys.sql_modules <br> to find out"}
 	Version_ScalarUDF2019Or+_Inlineable -->|"Yes"| UDFInlineableCheckSC{"Is the <br> 'TSQL_SCALAR_UDF_INLINING' <br> database scoped <br> configuration turned ON?"}
 	UDFInlineableCheckSC -->|"No"| Attention_UDFInlineableCheckSC["This option is ON by default, be aware that if you found <br> it OFF may be theris a good reason. <br><br> You can use a query HINT to disable it but not to enable. <br> You can, out of curiosity, turn it on and check <br> if it will make a difference"]
-	Attention_UDFInlineableCheckSC -->|"Howerver..."| Version_ScalarUDFNot2019
+	Attention_UDFInlineableCheckSC -->|"However..."| Version_ScalarUDFNot2019
 	UDFInlineableCheckSC -->|"Yes"| Version_ScalarUDFNot2019
 	Version_ScalarUDF2019Or+_Inlineable -->|"No"| Note_ReasonsNotInlineable["There are a lot of requirements that <br> need to be met for a scalar UDF to be inlineable. <br> Check <ins>'Inlineable scalar UDF requirements</ins>'"]
 	Note_ReasonsNotInlineable -->|"Workaround"| Version_ScalarUDFNot2019
