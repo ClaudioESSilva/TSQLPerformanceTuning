@@ -23,7 +23,7 @@ flowchart TB
 	RecursiveCTERelation -->|"n-n"| RecursiveCTERelation_nTOn["Performance of n-n relations may not be great. <br> Check if you have good indexing in place. <br><br> Test doing the same with a <br> hand-made cycle (#tmp tables + cycle)"]
     Result_ImprovementYes["Do you see improvements? #128588;"]
 	RecursiveCTERelation_nTOn --> Result_ImprovementYes
-	RecursiveCTERelation -->|"1-n"| RecursiveCTERelation_1TOn["Nice! Recursive CTEs <br> are better on 1-n relations."]
+	RecursiveCTERelation -->|"1-n"| RecursiveCTERelation_1TOn["Nice! Recursive CTEs <br> perform better on 1-n relations."]
 	RecursiveCTERelation_1TOn --> RecursiveCTERelation_1TOn_MultipleCalls{"Do you see the CTE being <br> called more than once?"}
 	Focus_CTE_Structure -->|"No"| RecursiveCTERelation_1TOn_MultipleCalls
 	RecursiveCTERelation_1TOn_MultipleCalls -->|"Yes"| CTEsNotTempTables["CTEs aren't temp tables. <br> The result won't be cached anyway. <br> This means the content of the CTE will  <br> need to run as many times as it's mentioned <br>  Check <ins>Using Common Table Expression (CTE) - Did you know...</ins>  <br>  <br>  <br> Try to get the data you need into a #temp  <br> table so you just hit that table(s) once <br> Then use the #temp table instead of/with  <br> the CTE"]
@@ -43,7 +43,7 @@ flowchart TB
     Focus_WhereClause["Lets focus on the WHERE clause"]
     RecursiveCTERelation_1TOn_MultipleCalls -->|"No"| Focus_WhereClause
     PartitionedTable -->|"No"| Focus_WhereClause
-    Focus_WhereClause --> Pattern_LongInClause{"Does the query have a <br> long IN clause? <br> Ex: 'ID IN (1,2,3...,19,21)'"}
+    Focus_WhereClause --> Pattern_LongInClause{"Does the query have a <br> long (more than 15 values) IN clause? <br> Ex: 'ID IN (1,2,3...,19,21)'"}
 	Pattern_LongInClause -->|"Yes"| Fix_LongInClause["If you see a CONSTANT SCAN or FILTER <br>operator on the  plan with big cost this <br> will most probably be the problem. <br><br> Replace the long in clause by either: <br> (1) using the BETWEEN clause or <br> (2) a temp table <br> (3) Table variable can also work but <br> be aware that can make query run <br> in serial if pre 2019 or if <br> DEFERED_COMPILATION_TV is OFF"]
 	Fix_LongInClause --> Result_ImprovementYes
 	
