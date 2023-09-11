@@ -62,8 +62,10 @@ flowchart TB
 
 	Focus_SelectWhere["Lets keep in mind the whole query again"]
     Pattern_NativeFunctions -->|"No"| Focus_SelectWhere
-	Focus_SelectWhere --> Pattern_ScalarUDF{"What about Scalar User <br> Defined Functions (UDF)?"}
+	Focus_SelectWhere --> Pattern_ScalarUDF{"Do you see Scalar User <br> Defined Functions (UDF)?"}
+	
 	Pattern_ScalarUDF -->|"Yes"| CheckVersion_ScalarUDF{"Is database compatibility <br> level 150 (2019) or higher?"}
+	Pattern_ScalarUDF -->|"No"| Focus_OnFrom
 	CheckVersion_ScalarUDF -->|"No"| Attention_WontParallelise["Your query won't parallelize!"]
 
 	Attention_WontParallelise --> Version_ScalarUDFNot2019["Try to pull the code from the function into <br> a CROSS/OUTER APPLY and then do the check. <br><br> Make sure you test the scenario correctly. <br> Use the OUTER if you need to still need <br> to return 'NULL' values."]
