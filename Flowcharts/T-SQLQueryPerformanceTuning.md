@@ -35,11 +35,11 @@ flowchart TB
 	PartitionedTable -->|"No"| Focus_WhereClause
     PartitionedTable{"Does the query uses<br> partitioned tables?"} -->|"Yes"| PartitionEliminationParttern{"Is it using the partitioned <br> column(s) to filter?"}
 	PartitionEliminationParttern -->|"Yes"| ExpectedPartitionElimination{"Do you see partition<br> elimination happening?"}
-	ExpectedPartitionElimination -->|"Yes"| ContinueOptimization["TODO: Continue with optimization"]
+	ExpectedPartitionElimination -->|"Yes"| CheckParallelism
 	ExpectedPartitionElimination -->|"No"| DataTypesAndPercision["Double check if the column(s)<br> data type and percision match the <br> variable/table column used as filter."]
 	DataTypesAndPercision --> FixDataTypePrecision{"By fixing this <br> do you now see <br> partition elimination?"}
-	FixDataTypePrecision -->|"No"| FixDataTypePrecision_No["Click here to read Paul's White - <br> 'Why doesn't partition elimination work?"]
 	FixDataTypePrecision -->|"Yes"| Result_ImprovementYes
+	FixDataTypePrecision -->|"No"| FixDataTypePrecision_No["Click here to read Paul's White - <br> 'Why doesn't partition elimination work?"]
 	PartitionEliminationParttern -->|"No"| AddPartitionColumns{"Can the query be <br> changed to use them?"}
 	AddPartitionColumns -->|"Yes"| DataTypesAndPercision
 
@@ -65,7 +65,7 @@ flowchart TB
 	Focus_SelectWhere --> Pattern_ScalarUDF{"What about Scalar User <br> Defined Functions (UDF)?"}
 	Pattern_ScalarUDF -->|"Yes"| CheckVersion_ScalarUDF{"Is database compatibility <br> level 150 (2019) or higher?"}
 	CheckVersion_ScalarUDF -->|"No"| Attention_WontParallelise["Your query won't parallelize!"]
-            %% Fix_LongInClause
+
 	Attention_WontParallelise --> Version_ScalarUDFNot2019["Try to pull the code from the function into <br> a CROSS/OUTER APPLY and then do the check. <br><br> Make sure you test the scenario correctly. <br> Use the OUTER if you need to still need <br> to return 'NULL' values."]
 	CheckVersion_ScalarUDF -->|"Yes"| Version_ScalarUDF2019Or+_Inlineable{"Is the scalar <br> UDF <ins>inlineable</ins>? <br> <br> Query the <br> sys.sql_modules <br> to find out"}
 	Version_ScalarUDF2019Or+_Inlineable -->|"Yes"| UDFInlineableCheckSC{"Is the <br> 'TSQL_SCALAR_UDF_INLINING' <br> database scoped <br> configuration turned ON?"}
@@ -80,12 +80,37 @@ flowchart TB
 	CheckVersion_ScalarUDF -->|"No"| Focus_OnFrom
 	Focus_OnFrom --> Joins{"Does the query uses JOINs?"}
 	Joins -->|"Yes"| Joins_Or{"Does the join clause have <br>any OR logical operator? <br><br> Ex: ON tbl1.Col1 = tbl2.Col1 <br> OR tbl1.Col2 = tbl2.Col2"}
-	Joins -->|"No"| ContinueOptimization
+	Joins -->|"No"| CheckParallelism
 	Joins_Or -->|"Yes"| Fix_JoinsOr["Try to split the query in <br> multiple SELECT staments. <br> Each one will do the <br>JOIN on one of the conditions. <br>Use UNION [ALL] to merge the results.<br><br> Make sure you have proper <br>indexing on those <br>columns for better results"]
 	Fix_JoinsOr --> Fix_JoinsOr_Extra["You will get something like:<br> SELECT...<br>FROM tbl1 <br>INNER JOIN tbl2 <br>ON tbl1.col1 = tbl2.col1<br> UNION [ALL]<br> SELECT...<br>FROM tbl1 <br>INNER JOIN tbl2 <br>ON tbl1.col2 = tbl2.col2"]
-	Joins_Or -->|"No"| ContinueOptimization
+	Joins_Or -->|"No"| CheckParallelism
 	Fix_JoinsOr_Extra --> Result_ImprovementYes
+
+	CheckParallelism{"Is the query cost <br> bigger than the configured <br> Cost Threshold for Parallelism (CTfP)"}
+	CheckParallelism -->|"Yes"| ParallelPlan{"Do you see a partial <br> or full parallel plan?"}
+
+	ParallelPlan -->|"No"| CheckExecutionPlanEngineVersion{"Are you running on <br>SQL Server 2022?"}
+	ParallelPlan -->|"Yes"| TBC
+	CheckExecutionPlanEngineVersion -->|"Yes"| CheckReasonNonParallelPlan["Right click on the left-most <br>operator and select properties. <br>Check the 'NonParallelPlanReason' property <br>to have a clue why the plan didn't went parallel"]
+	CheckReasonNonParallelPlan --> FindOnTheFlow["Check if, in this flow, <br> that pattern is mentioned <br>and try to follow it to improve"]
+	FindOnTheFlow --> Result_ImprovementYes
+	CheckExecutionPlanEngineVersion -->|"No"| CheckExecutionPlanEngineVersion_No["This will need a <br>bit more work."]
+	CheckExecutionPlanEngineVersion_No --> Note_ReasonsNotParallelPlan["I suggest that you<br> read the list of <br> constructs that inhibit parallelism. <br> Check <ins>'NonParallelPlanReason</ins>'."]
+	Note_ReasonsNotParallelPlan --> HaveYouFoundAPossibleReason{"Have you found a possible reason"}
+	HaveYouFoundAPossibleReason -->|"Yes"| FindOnTheFlow
+	HaveYouFoundAPossibleReason -->|"No"| NonParallelInsertSelect{"Is the query an INSERT...INTO?"}
+	NonParallelInsertSelect -->|"Yes"| DatabaseCompatabilityLelvel{"What is the <br>Compatability Level <br>that database is running on?"}
+	NonParallelInsertSelect -->|"No"| TBC
+	DatabaseCompatabilityLelvel -->|"< 160"| TBC
+	DatabaseCompatabilityLelvel -->|">= 160"| TBC
+	
+
+	CheckParallelism -->|"No"| TBC
+
+	TBC["To be continued"]
 
 	click CTEsNotTempTables "https://claudioessilva.eu/2017/11/30/Using-Common-Table-Expression-CTE-Did-you-know.../" "Using Common Table Expression (CTE) - Did you know..."
     click FixDataTypePrecision_No "https://www.sql.kiwi/2012/09/why-doesn-t-partition-elimination-work.html" "Paul's White - 'Why doesn't partition elimination work?'"
     click Note_ReasonsNotInlineable "https://learn.microsoft.com/en-us/sql/relational-databases/user-defined-functions/scalar-udf-inlining?view=sql-server-ver16#requirements" "Inlineable scalar UDF requirements"
+
+	click Note_ReasonsNotParallelPlan "https://learn.microsoft.com/en-us/sql/relational-databases/query-processing-architecture-guide?view=sql-server-ver15#parallel-query-processing" "NonParallelPlanReason"
