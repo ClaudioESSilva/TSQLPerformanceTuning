@@ -18,18 +18,21 @@ flowchart TB
 	IsolateTsqlQuery -->|"No"| IsolateTsqlQuery_No["First find and isolate the query that is slow!"]
 	IsolateTsqlQuery_No --> Starting
 	Focus_CTE{"Does it use CTEs?"} -->|"Yes"| Focus_CTE_Structure{"Is it a recursive CTE?"}
-	IsolateTsqlQuery --->|"Yes <br> "| Focus_CTE
-	Focus_CTE_Structure -->|"Yes"| RecursiveCTERelation{"What is the relation? <br> 1-n or n-n?"}
-	RecursiveCTERelation -->|"n-n"| RecursiveCTERelation_nTOn["Performance of n-n relations may not be great. <br> Check if you have good indexing in place. <br><br> Test doing the same with a <br> hand-made cycle (#tmp tables + cycle)"]
+	IsolateTsqlQuery --->|"Yes"| Focus_CTE
+	Focus_CTE_Structure -->|"Yes"| RecursiveCTERelation{"What is the hierachy? <br> 1-n or n-n?"}
+	RecursiveCTERelation -->|"n-n"| RecursiveCTERelation_nTOnComment["Performance of n-n relations <br> may not be great."]
+	RecursiveCTERelation_nTOnComment --> CTE_IndexingSuggestion
+	CTE_IndexingSuggestion --> RecursiveCTERelation_nTOn["Test doing the same with a <br> hand-made cycle (#temp tables + cycle)"]
     Result_ImprovementYes["Do you see improvements? #128588;"]
 	RecursiveCTERelation_nTOn --> Result_ImprovementYes
-	RecursiveCTERelation -->|"1-n"| RecursiveCTERelation_1TOn["Nice! Recursive CTEs <br> perform better on 1-n relations."]
-	RecursiveCTERelation_1TOn --> RecursiveCTERelation_1TOn_MultipleCalls{"Do you see the CTE being <br> called more than once?"}
-	Focus_CTE_Structure -->|"No"| RecursiveCTERelation_1TOn_MultipleCalls
+	RecursiveCTERelation -->|"1-n"| RecursiveCTERelation_1TOn["Recursive CTEs <br> perform better on 1-n relations."]
+	RecursiveCTERelation_1TOn --> CTE_Indexing{"Do you have proper indexing <br>to support the recursive CTE"}
+	Focus_CTE_Structure -->|"No"| RecursiveCTERelation_1TOn_MultipleCalls{"Do you see the CTE being <br> called more than once?"}
 	RecursiveCTERelation_1TOn_MultipleCalls -->|"Yes"| CTEsNotTempTables["CTEs aren't temp tables. <br> The result won't be cached anyway. <br> This means the content of the CTE will  <br> need to run as many times as it's mentioned <br>  Check <ins>Using Common Table Expression (CTE) - Did you know...</ins>  <br>  <br>  <br> Try to get the data you need into a #temp  <br> table so you just hit that table(s) once <br> Then use the #temp table instead of/with  <br> the CTE"]
 	CTEsNotTempTables --> Result_ImprovementYes
 
     Focus_CTE{"Does it use CTEs?"} -->|"No"| PartitionedTable
+	PartitionedTable -->|"No"| Focus_WhereClause
     PartitionedTable{"Does the query uses<br> partitioned tables?"} -->|"Yes"| PartitionEliminationParttern{"Is it using the partitioned <br> column(s) to filter?"}
 	PartitionEliminationParttern -->|"Yes"| ExpectedPartitionElimination{"Do you see partition<br> elimination happening?"}
 	ExpectedPartitionElimination -->|"Yes"| ContinueOptimization["TODO: Continue with optimization"]
@@ -42,7 +45,9 @@ flowchart TB
 
     Focus_WhereClause["Lets focus on the WHERE clause"]
     RecursiveCTERelation_1TOn_MultipleCalls -->|"No"| Focus_WhereClause
-    PartitionedTable -->|"No"| Focus_WhereClause
+	CTE_Indexing -->|"No"|CTE_IndexingSuggestion["Double-check if you miss some <br>indexes that may <br>help the execution"]
+	CTE_Indexing -->|"Yes"|RecursiveCTERelation_1TOn_MultipleCalls
+
     Focus_WhereClause --> Pattern_LongInClause{"Does the query have a <br> long (more than 15 values) IN clause? <br> Ex: 'ID IN (1,2,3...,19,21)'"}
 	Pattern_LongInClause -->|"Yes"| Fix_LongInClause["If you see a CONSTANT SCAN or FILTER <br>operator on the  plan with big cost this <br> will most probably be the problem. <br><br> Replace the long in clause by either: <br> (1) using the BETWEEN clause or <br> (2) a temp table <br> (3) Table variable can also work but <br> be aware that can make query run <br> in serial if pre 2019 or if <br> DEFERED_COMPILATION_TV is OFF"]
 	Fix_LongInClause --> Result_ImprovementYes
@@ -77,10 +82,9 @@ flowchart TB
 	Joins -->|"Yes"| Joins_Or{"Does the join clause have <br>any OR logical operator? <br><br> Ex: ON tbl1.Col1 = tbl2.Col1 <br> OR tbl1.Col2 = tbl2.Col2"}
 	Joins -->|"No"| ContinueOptimization
 	Joins_Or -->|"Yes"| Fix_JoinsOr["Try to split the query in <br> multiple SELECT staments. <br> Each one will do the <br>JOIN on one of the conditions. <br>Use UNION [ALL] to merge the results.<br><br> Make sure you have proper <br>indexing on those <br>columns for better results"]
-	Fix_JoinsOr --> Extra["You will get something like:<br> SELECT...<br>FROM tbl1 <br>INNER JOIN tbl2 <br>ON tbl1.col1 = tbl2.col1<br> UNION [ALL]<br> SELECT...<br>FROM tbl1 <br>INNER JOIN tbl2 <br>ON tbl1.col2 = tbl2.col2"]
+	Fix_JoinsOr --> Fix_JoinsOr_Extra["You will get something like:<br> SELECT...<br>FROM tbl1 <br>INNER JOIN tbl2 <br>ON tbl1.col1 = tbl2.col1<br> UNION [ALL]<br> SELECT...<br>FROM tbl1 <br>INNER JOIN tbl2 <br>ON tbl1.col2 = tbl2.col2"]
 	Joins_Or -->|"No"| ContinueOptimization
-	%% Fix_JoinsOr --> Result_ImprovementYes
-	Extra --> Result_ImprovementYes
+	Fix_JoinsOr_Extra --> Result_ImprovementYes
 
 	click CTEsNotTempTables "https://claudioessilva.eu/2017/11/30/Using-Common-Table-Expression-CTE-Did-you-know.../" "Using Common Table Expression (CTE) - Did you know..."
     click FixDataTypePrecision_No "https://www.sql.kiwi/2012/09/why-doesn-t-partition-elimination-work.html" "Paul's White - 'Why doesn't partition elimination work?'"
