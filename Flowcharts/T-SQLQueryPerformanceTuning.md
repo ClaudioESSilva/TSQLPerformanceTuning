@@ -5,7 +5,7 @@ flowchart TB
 	IsolateTsqlQuery_No --> Starting
 	Focus_CTE{"Does it use CTEs?"} -->|"Yes"| Focus_CTE_Structure{"Is it a recursive CTE?"}
 	IsolateTsqlQuery --->|"Yes"| Focus_CTE
-	Focus_CTE_Structure -->|"Yes"| RecursiveCTERelation{"What is the hierachy? <br> 1-n or n-n?"}
+	Focus_CTE_Structure -->|"Yes"| RecursiveCTERelation{"What is the hierarchy? <br> 1-n or n-n?"}
 	RecursiveCTERelation -->|"n-n"| RecursiveCTERelation_nTOnComment["Performance of n-n relations <br> may not be great."]
 	RecursiveCTERelation_nTOnComment --> CTE_IndexingSuggestion
 	CTE_IndexingSuggestion --> RecursiveCTERelation_nTOn["Test doing the same with a <br> hand-made cycle (#temp tables + cycle)"]
@@ -22,7 +22,7 @@ flowchart TB
     PartitionedTable{"Does the query uses<br> partitioned tables?"} -->|"Yes"| PartitionEliminationPattern{"Is it using the partitioned <br> column(s) to filter?"}
 	PartitionEliminationPattern -->|"Yes"| ExpectedPartitionElimination{"Do you see partition<br> elimination happening?"}
 	ExpectedPartitionElimination -->|"Yes"| CheckParallelism
-	ExpectedPartitionElimination -->|"No"| DataTypesAndPercision["Double check if the column(s)<br> data type and percision match the <br> variable/table column used as filter."]
+	ExpectedPartitionElimination -->|"No"| DataTypesAndPercision["Double check if the column(s)<br> data type and precision match the <br> variable/table column used as filter."]
 	DataTypesAndPercision --> FixDataTypePrecision{"By fixing this <br> do you now see <br> partition elimination?"}
 	FixDataTypePrecision -->|"Yes"| Result_ImprovementYes
 	FixDataTypePrecision -->|"No"| FixDataTypePrecision_No["Click here to read Paul's White - <br> 'Why doesn't partition elimination work?"]
@@ -35,7 +35,7 @@ flowchart TB
 	CTE_Indexing -->|"Yes"|RecursiveCTERelation_1TOn_MultipleCalls
 
     Focus_WhereClause --> Pattern_LongInClause{"Does the query have a <br> long (more than 15 values) IN clause? <br> Ex: 'ID IN (1,2,3...,19,21)'"}
-	Pattern_LongInClause -->|"Yes"| Fix_LongInClause["If you see a CONSTANT SCAN or FILTER <br>operator on the  plan with big cost this <br> will most probably be the problem. <br><br> Replace the long in clause by either: <br> (1) using the BETWEEN clause or <br> (2) a temp table <br> (3) Table variable can also work but <br> be aware that can make query run <br> in serial if pre 2019 or if <br> DEFERED_COMPILATION_TV is OFF"]
+	Pattern_LongInClause -->|"Yes"| Fix_LongInClause["If you see a CONSTANT SCAN or FILTER <br>operator on the  plan with big cost this <br> will most probably be the problem. <br><br> Replace the long in clause by either: <br> (1) using the BETWEEN clause or <br> (2) a temp table <br> (3) Table variable can also work but <br> be aware that can make query run <br> in serial if pre 2019 or if <br> DEFERRED_COMPILATION_TV is OFF"]
 	Fix_LongInClause --> Result_ImprovementYes
 	
     Pattern_LongInClause -->|"No"| Pattern_LongListOfAndOr{"What about a mix of <br> of AND/OR filters?"}
@@ -57,7 +57,7 @@ flowchart TB
 	Attention_WontParallelise --> Version_ScalarUDFNot2019["Try to pull the code from the function into <br> a CROSS/OUTER APPLY and then do the check. <br><br> Make sure you test the scenario correctly. <br> Use the OUTER if you need to still need <br> to return 'NULL' values."]
 	CheckVersion_ScalarUDF -->|"Yes"| Version_ScalarUDF2019Or+_Inlineable{"Is the scalar <br> UDF <ins>inlineable</ins>? <br> <br> Query the <br> sys.sql_modules <br> to find out"}
 	Version_ScalarUDF2019Or+_Inlineable -->|"Yes"| UDFInlineableCheckSC{"Is the <br> 'TSQL_SCALAR_UDF_INLINING' <br> database scoped <br> configuration turned ON?"}
-	UDFInlineableCheckSC -->|"No"| Attention_UDFInlineableCheckSC["This option is ON by default, be aware that if you found <br> it OFF may be theris a good reason. <br><br> You can use a query HINT to disable it but not to enable. <br> You can, out of curiosity, turn it on and check <br> if it will make a difference"]
+	UDFInlineableCheckSC -->|"No"| Attention_UDFInlineableCheckSC["This option is ON by default, be aware that if you found <br> it OFF may be there is a good reason. <br><br> You can use a query HINT to disable it but not to enable. <br> You can, out of curiosity, turn it on and check <br> if it will make a difference"]
 	Attention_UDFInlineableCheckSC -->|"However..."| Version_ScalarUDFNot2019
 	UDFInlineableCheckSC -->|"Yes"| Version_ScalarUDFNot2019
 	Version_ScalarUDF2019Or+_Inlineable -->|"No"| Note_ReasonsNotInlineable["There are a lot of requirements that <br> need to be met for a scalar UDF to be inlineable. <br> Check <ins>'Inlineable scalar UDF requirements</ins>'"]
@@ -69,7 +69,7 @@ flowchart TB
 	Focus_OnFrom --> Joins{"Does the query uses JOINs?"}
 	Joins -->|"Yes"| Joins_Or{"Does the join clause have <br>any OR logical operator? <br><br> Ex: ON tbl1.Col1 = tbl2.Col1 <br> OR tbl1.Col2 = tbl2.Col2"}
 	Joins -->|"No"| CheckParallelism
-	Joins_Or -->|"Yes"| Fix_JoinsOr["Try to split the query in <br> multiple SELECT staments. <br> Each one will do the <br>JOIN on one of the conditions. <br>Use UNION [ALL] to merge the results.<br><br> Make sure you have proper <br>indexing on those <br>columns for better results"]
+	Joins_Or -->|"Yes"| Fix_JoinsOr["Try to split the query in <br> multiple SELECT statements. <br> Each one will do the <br>JOIN on one of the conditions. <br>Use UNION [ALL] to merge the results.<br><br> Make sure you have proper <br>indexing on those <br>columns for better results"]
 	Fix_JoinsOr --> Fix_JoinsOr_Extra["You will get something like:<br> SELECT...<br>FROM tbl1 <br>INNER JOIN tbl2 <br>ON tbl1.col1 = tbl2.col1<br> UNION [ALL]<br> SELECT...<br>FROM tbl1 <br>INNER JOIN tbl2 <br>ON tbl1.col2 = tbl2.col2"]
 	Joins_Or -->|"No"| CheckParallelism
 	Fix_JoinsOr_Extra --> Result_ImprovementYes
@@ -87,7 +87,7 @@ flowchart TB
 	Note_ReasonsNotParallelPlan --> HaveYouFoundAPossibleReason{"Have you found a possible reason"}
 	HaveYouFoundAPossibleReason -->|"Yes"| FindOnTheFlow
 	HaveYouFoundAPossibleReason -->|"No"| NonParallelInsertSelect{"Is the query an INSERT...INTO?"}
-	NonParallelInsertSelect -->|"Yes"| DatabaseCompatabilityLelvel{"What is the <br>Compatability Level <br>that database is running on?"}
+	NonParallelInsertSelect -->|"Yes"| DatabaseCompatabilityLelvel{"What is the <br>Compatibility Level <br>that database is running on?"}
 	NonParallelInsertSelect -->|"No"| TBC
 	DatabaseCompatabilityLelvel -->|"< 160"| TBC
 	DatabaseCompatabilityLelvel -->|">= 160"| TBC
