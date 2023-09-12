@@ -19,14 +19,14 @@ flowchart TB
 
     Focus_CTE{"Does it use CTEs?"} -->|"No"| PartitionedTable
 	PartitionedTable -->|"No"| Focus_WhereClause
-    PartitionedTable{"Does the query uses<br> partitioned tables?"} -->|"Yes"| PartitionEliminationParttern{"Is it using the partitioned <br> column(s) to filter?"}
-	PartitionEliminationParttern -->|"Yes"| ExpectedPartitionElimination{"Do you see partition<br> elimination happening?"}
+    PartitionedTable{"Does the query uses<br> partitioned tables?"} -->|"Yes"| PartitionEliminationPattern{"Is it using the partitioned <br> column(s) to filter?"}
+	PartitionEliminationPattern -->|"Yes"| ExpectedPartitionElimination{"Do you see partition<br> elimination happening?"}
 	ExpectedPartitionElimination -->|"Yes"| CheckParallelism
 	ExpectedPartitionElimination -->|"No"| DataTypesAndPercision["Double check if the column(s)<br> data type and percision match the <br> variable/table column used as filter."]
 	DataTypesAndPercision --> FixDataTypePrecision{"By fixing this <br> do you now see <br> partition elimination?"}
 	FixDataTypePrecision -->|"Yes"| Result_ImprovementYes
 	FixDataTypePrecision -->|"No"| FixDataTypePrecision_No["Click here to read Paul's White - <br> 'Why doesn't partition elimination work?"]
-	PartitionEliminationParttern -->|"No"| AddPartitionColumns{"Can the query be <br> changed to use them?"}
+	PartitionEliminationPattern -->|"No"| AddPartitionColumns{"Can the query be <br> changed to use them?"}
 	AddPartitionColumns -->|"Yes"| DataTypesAndPercision
 
     Focus_WhereClause["Lets focus on the WHERE clause"]
