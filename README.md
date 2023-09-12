@@ -4,7 +4,7 @@ Try to find why a query is slow and get suggestions to fix it.
 
 ## Flowcharts
 
-In the [Flowcharts](.\Flowcharts) directory you will find some "decision tree" build with mermaid. 
+In the [Flowcharts](./Flowcharts) directory you will find some "decision tree" build with mermaid. 
 These flowcharts are meant to help you find a reason why your SQL Server query may have performance issues and suggest some ideas to fix it.
 
 Mainly the suggestions will be around code re-write. 
