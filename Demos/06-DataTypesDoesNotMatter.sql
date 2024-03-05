@@ -144,7 +144,7 @@ CREATE CLUSTERED INDEX CI_TabPartitionElimination ON [dbo].TabPartitionEliminati
 GO
 
 /*
-  Copy all data from paritioned table to the non-partitioned
+  Copy all data from partitioned table to the non-partitioned
 */
 INSERT INTO TabNonPartitioned
 SELECT * FROM TabPartitionElimination
@@ -316,7 +316,7 @@ GO
 
 /*
 	Bottom line:
-		- Avoid implicit convertions.
+		- Avoid implicit conversions.
 		- Make sure you use variables of the same data types as our table columns
 		  That will also help getting partition elimination if possible
 */

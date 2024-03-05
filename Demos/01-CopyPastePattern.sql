@@ -1,5 +1,5 @@
 /*
-	The Copy & Paste parttern problem
+	The Copy & Paste pattern problem
 */
 ALTER DATABASE [StackOverflow] SET COMPATIBILITY_LEVEL = 160;
 GO

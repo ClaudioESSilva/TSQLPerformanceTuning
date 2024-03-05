@@ -2022,10 +2022,7 @@ SELECT p.Id AS col_0_0_,
        p.OwnerUserId AS col_8_0_,
        p.PostTypeId AS col_9_0_
 FROM Posts p
-WHERE 
-	 --p.emediaid = @P0
-  --    AND 
-	  (p.PostTypeId IN ( 0, 1 ))
+WHERE (p.PostTypeId IN ( 0, 1 ))
       AND
       (
           p.OwnerUserId = @P1
