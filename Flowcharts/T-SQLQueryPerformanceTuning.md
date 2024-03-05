@@ -8,10 +8,9 @@ flowchart TB
 	Focus_CTE_Structure -->|"Yes"| RecursiveCTERelation{"What is the hierarchy? <br> 1-n or n-n?"}
 	RecursiveCTERelation -->|"n-n"| RecursiveCTERelation_nTOnComment["Performance of n-n relations <br> may not be great."]
 	RecursiveCTERelation_nTOnComment --> CTE_IndexingSuggestion
-	CTE_IndexingSuggestion --> RecursiveCTERelation_nTOn["Test doing the same with a <br> hand-made cycle (#temp tables + cycle)"]
-    Result_ImprovementYes["Do you see improvements? #128588;"]
+	Result_ImprovementYes["Do you see improvements? #128588;"]
 	RecursiveCTERelation_nTOn --> Result_ImprovementYes
-	RecursiveCTERelation -->|"1-n"| RecursiveCTERelation_1TOn["Recursive CTEs <br> perform better on 1-n relations."]
+	RecursiveCTERelation -->|"1-n"| RecursiveCTERelation_1TOn["Recursive CTEs <br> perform better on 1-n relations"]
 	RecursiveCTERelation_1TOn --> CTE_Indexing{"Do you have proper indexing <br>to support the recursive CTE"}
 	Focus_CTE_Structure -->|"No"| RecursiveCTERelation_1TOn_MultipleCalls{"Do you see the CTE being <br> called more than once?"}
 	RecursiveCTERelation_1TOn_MultipleCalls -->|"Yes"| CTEsNotTempTables["CTEs aren't temp tables. <br> The result won't be cached anyway. <br> This means the content of the CTE will  <br> need to run as many times as it's mentioned <br>  Check <ins>Using Common Table Expression (CTE) - Did you know...</ins>  <br>  <br>  <br> Try to get the data you need into a #temp  <br> table so you just hit that table(s) once <br> Then use the #temp table instead of/with  <br> the CTE"]
@@ -22,7 +21,7 @@ flowchart TB
     PartitionedTable{"Does the query uses<br> partitioned tables?"} -->|"Yes"| PartitionEliminationPattern{"Is it using the partitioned <br> column(s) to filter?"}
 	PartitionEliminationPattern -->|"Yes"| ExpectedPartitionElimination{"Do you see partition<br> elimination happening?"}
 	ExpectedPartitionElimination -->|"Yes"| CheckParallelism
-	ExpectedPartitionElimination -->|"No"| DataTypesAndPercision["Double check if the column(s)<br> data type and precision match the <br> variable/table column used as filter."]
+	ExpectedPartitionElimination -->|"No"| DataTypesAndPercision["Double-check if the column(s)<br> data type and precision match the <br> variable/table column used as filter."]
 	DataTypesAndPercision --> FixDataTypePrecision{"By fixing this <br> do you now see <br> partition elimination?"}
 	FixDataTypePrecision -->|"Yes"| Result_ImprovementYes
 	FixDataTypePrecision -->|"No"| FixDataTypePrecision_No["Click here to read Paul's White - <br> 'Why doesn't partition elimination work?"]
@@ -31,8 +30,13 @@ flowchart TB
 
     Focus_WhereClause["Lets focus on the WHERE clause"]
     RecursiveCTERelation_1TOn_MultipleCalls -->|"No"| Focus_WhereClause
-	CTE_Indexing -->|"No"|CTE_IndexingSuggestion["Double-check if you miss some <br>indexes that may <br>help the execution"]
-	CTE_Indexing -->|"Yes"|RecursiveCTERelation_1TOn_MultipleCalls
+	CTE_Indexing -->|"No"|CTE_IndexingSuggestion["Double-check if you missed some <br>indexes that may <br>help the execution"]
+	CTE_Indexing -->|"Yes"|CTE_DeepOfHierarchy["Depending on how deep <br>is the hierarchy it may still <br>worth test the #temp table approach"]
+	CTE_DeepOfHierarchy --> SlowrCTEs["Click here to read Jeff's Moden - <br> Hidden RBAR: Counting with Recursive CTE's"]
+	
+	SlowrCTEs --> RecursiveCTERelation_nTOn["Test doing the same with a <br> hand-made loop (#temp tables + iterate)"]
+
+	CTE_IndexingSuggestion --> SlowrCTEs
 
     Focus_WhereClause --> Pattern_LongInClause{"Does the query have a <br> long (more than 15 values) IN clause? <br> Ex: 'ID IN (1,2,3...,19,21)'"}
 	Pattern_LongInClause -->|"Yes"| Fix_LongInClause["If you see a CONSTANT SCAN or FILTER <br>operator on the  plan with big cost this <br> will most probably be the problem. <br><br> Replace the long in clause by either: <br> (1) using the BETWEEN clause or <br> (2) a temp table <br> (3) Table variable can also work but <br> be aware that can make query run <br> in serial if pre 2019 or if <br> DEFERRED_COMPILATION_TV is OFF"]
@@ -98,6 +102,7 @@ flowchart TB
 	TBC["To be continued"]
 
 	click CTEsNotTempTables "https://claudioessilva.eu/2017/11/30/Using-Common-Table-Expression-CTE-Did-you-know.../" "Using Common Table Expression (CTE) - Did you know..."
+	click SlowrCTEs "https://www.sqlservercentral.com/articles/hidden-rbar-counting-with-recursive-ctes" "Hidden RBAR: Counting with Recursive CTE's"
     click FixDataTypePrecision_No "https://www.sql.kiwi/2012/09/why-doesn-t-partition-elimination-work.html" "Paul's White - 'Why doesn't partition elimination work?'"
     click Note_ReasonsNotInlineable "https://learn.microsoft.com/en-us/sql/relational-databases/user-defined-functions/scalar-udf-inlining?view=sql-server-ver16#requirements" "Inlineable scalar UDF requirements"
 
