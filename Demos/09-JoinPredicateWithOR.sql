@@ -16,6 +16,23 @@ SELECT DISTINCT U.Id
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 -- We can re-write in the following manner
 SELECT U.Id
 	FROM dbo.Posts P

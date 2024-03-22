@@ -57,7 +57,7 @@ GO
 
 /*
 	A real story!
-	New request: Add a new validation for a new CustomerID
+	New request: Add a new validation for a new Score
 */
 
 DECLARE @param1 INT = 1
