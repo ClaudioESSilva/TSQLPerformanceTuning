@@ -45,7 +45,8 @@ SELECT U.Id
 		ON P.LastEditorUserId = U.AccountId
 GO
 
-
+ALTER DATABASE [StackOverflow] SET COMPATIBILITY_LEVEL = 160;
+GO
 
 
 -- Oh BATCH_MODE_ADAPTIVE_JOINS (configuration_id = 9) kicked in! That's why, right?
