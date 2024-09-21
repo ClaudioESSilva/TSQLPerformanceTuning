@@ -69,7 +69,6 @@ flowchart TB
 	Version_ScalarUDFNot2019 --> Result_ImprovementYes
 
 	Focus_OnFrom["Lets take a look on FROM"]
-	CheckVersion_ScalarUDF -->|"No"| Focus_OnFrom
 	Focus_OnFrom --> Joins{"Does the query uses JOINs?"}
 	Joins -->|"Yes"| Joins_Or{"Does the join clause have <br>any OR logical operator? <br><br> Ex: ON tbl1.Col1 = tbl2.Col1 <br> OR tbl1.Col2 = tbl2.Col2"}
 	Joins -->|"No"| CheckParallelism
