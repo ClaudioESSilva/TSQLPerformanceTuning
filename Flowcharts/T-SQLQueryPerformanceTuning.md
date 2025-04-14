@@ -96,7 +96,7 @@ flowchart TB
 	NonParallelInsertSelect -->|"Yes"| DatabaseCompatabilityLelvel{"What is the <br>Compatibility Level <br>that database is running on?"}
 	NonParallelInsertSelect -->|"No"| TBC
 	DatabaseCompatabilityLelvel -->|"< 160"| TBC
-	DatabaseCompatabilityLelvel -->|">= 160"| TBC
+	DatabaseCompatabilityLelvel -->|"&gt;= 160"| TBC
 	
 
 	CheckParallelism -->|"No"| TBC
