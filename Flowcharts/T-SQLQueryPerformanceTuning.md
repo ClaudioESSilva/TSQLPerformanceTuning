@@ -71,7 +71,10 @@ flowchart TB
 	Focus_OnFrom["Lets take a look on FROM"]
 	Focus_OnFrom --> Joins{"Does the query uses JOINs?"}
 	Joins -->|"Yes"| Joins_Or{"Does the join clause have <br>any OR logical operator? <br><br> Ex: ON tbl1.Col1 = tbl2.Col1 <br> OR tbl1.Col2 = tbl2.Col2"}
-	Joins -->|"No"| CheckParallelism
+	Joins -->|"No"| Join_ByText{"Is the join condition done by using (n)(var)char data types?"}
+	Join_ByText -->|"Yes"| Check_JoinByText["Check the collation of the columns being used on the JOIN condition! NON-SQL collations are slower than native SQL ones! <br> You can test this by copying the tables data to a new table where the collation is a 'SQL_*' one. Do the same join and check the performance."]
+	Check_JoinByText --> Result_ImprovementYes
+	Join_ByText -->|"No"|CheckParallelism
 	Joins_Or -->|"Yes"| Fix_JoinsOr["Try to split the query in <br> multiple SELECT statements. <br> Each one will do the <br>JOIN on one of the conditions. <br>Use UNION [ALL] to merge the results.<br><br> Make sure you have proper <br>indexing on those <br>columns for better results"]
 	Fix_JoinsOr --> Fix_JoinsOr_Extra["You will get something like:<br> SELECT...<br>FROM tbl1 <br>INNER JOIN tbl2 <br>ON tbl1.col1 = tbl2.col1<br> UNION [ALL]<br> SELECT...<br>FROM tbl1 <br>INNER JOIN tbl2 <br>ON tbl1.col2 = tbl2.col2"]
 	Joins_Or -->|"No"| CheckParallelism
